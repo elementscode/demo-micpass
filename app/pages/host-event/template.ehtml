@@ -1,0 +1,359 @@
+import "./style.css";
+import { LiveView } from "@elements/app";
+import { Layout } from "#app/shared/templates/layout";
+import { PollBars, WordCloud } from "#app/shared/templates/poll-results";
+import {
+  MicEvent,
+  Question,
+  QuestionStatus,
+  QuestionVote,
+  Poll,
+  PollKind,
+  PollResponse,
+  rankQuestions,
+  voteCounts,
+  tallyChoices,
+  tallyWords,
+  responseCount,
+} from "#app/shared/services/live";
+import { timeAgo, plural } from "#app/shared/services/format";
+
+type Filter = "review" | "live" | "answered" | "hidden";
+
+interface ConsoleState {
+  filter: Filter;
+}
+
+interface OptionDraft {
+  id: string;
+  text: string;
+}
+
+interface PollForm {
+  prompt: string;
+  kind: PollKind;
+  options: OptionDraft[];
+  error: string;
+}
+
+function blankOptions(): OptionDraft[] {
+  return [0, 1, 2].map(() => ({ id: crypto.randomUUID(), text: "" }));
+}
+
+function blankPoll(): PollForm {
+  return { prompt: "", kind: "choice", options: blankOptions(), error: "" };
+}
+
+function current(event: LiveView<MicEvent>): MicEvent {
+  return event.at(0)!;
+}
+
+function inFilter(q: Question, filter: Filter): boolean {
+  switch (filter) {
+    case "review":
+      return q.status === "pending";
+
+    case "live":
+      return q.status === "live" && !q.answered;
+
+    case "answered":
+      return q.status === "live" && q.answered;
+
+    default:
+      return q.status === "hidden";
+  }
+}
+
+function filtered(questions: LiveView<Question>, votes: LiveView<QuestionVote>, filter: Filter): Question[] {
+  let list = questions.filter((q) => inFilter(q, filter));
+
+  if (filter === "review") {
+    return list.sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
+  }
+
+  return rankQuestions(list, voteCounts(votes));
+}
+
+function countIn(questions: LiveView<Question>, filter: Filter): number {
+  return questions.filter((q) => inFilter(q, filter)).length;
+}
+
+function setStatus(questions: LiveView<Question>, q: Question, status: QuestionStatus) {
+  questions.update({ ...q, status, pinned: status === "live" && q.pinned });
+}
+
+function onPin(questions: LiveView<Question>, q: Question) {
+  if (q.pinned) {
+    questions.update({ ...q, pinned: false });
+    return;
+  }
+
+  for (let other of questions.filter((x) => x.pinned && x.id !== q.id)) {
+    questions.update({ ...other, pinned: false });
+  }
+
+  questions.update({ ...q, pinned: true });
+}
+
+function onAnswered(questions: LiveView<Question>, q: Question) {
+  questions.update({ ...q, answered: !q.answered, pinned: false });
+}
+
+function onModerated(event: LiveView<MicEvent>) {
+  let ev = current(event);
+  event.update({ ...ev, moderated: !ev.moderated });
+}
+
+function onFilter(state: ConsoleState, filter: Filter) {
+  state.filter = filter;
+}
+
+function onKind(form: PollForm, kind: PollKind) {
+  form.kind = kind;
+}
+
+function onAddOption(form: PollForm) {
+  form.options.push({ id: crypto.randomUUID(), text: "" });
+}
+
+function onRemoveOption(form: PollForm, option: OptionDraft) {
+  let i = form.options.indexOf(option);
+  if (i >= 0 && form.options.length > 2) {
+    form.options.splice(i, 1);
+  }
+}
+
+function onCreatePoll(polls: LiveView<Poll>, form: PollForm, reset: () => void) {
+  let prompt = form.prompt.trim();
+  let options = form.options.map((o) => o.text.trim()).filter(Boolean);
+
+  if (!prompt) {
+    form.error = "Write the poll question.";
+    return;
+  }
+
+  if (form.kind === "choice" && options.length < 2) {
+    form.error = "Add at least two options.";
+    return;
+  }
+
+  polls.insert({
+    prompt,
+    kind: form.kind,
+    options: form.kind === "choice" ? options : [],
+    status: "draft",
+    createdAt: new Date(),
+  }, reset);
+}
+
+function onOpenPoll(polls: LiveView<Poll>, event: LiveView<MicEvent>, poll: Poll) {
+  for (let other of polls.filter((p) => p.status === "open" && p.id !== poll.id)) {
+    polls.update({ ...other, status: "closed" });
+  }
+
+  polls.update({ ...poll, status: "open" });
+  event.update({ ...current(event), showPollId: poll.id });
+}
+
+function onClosePoll(polls: LiveView<Poll>, poll: Poll) {
+  polls.update({ ...poll, status: "closed" });
+}
+
+function onShow(event: LiveView<MicEvent>, pollId: string | null) {
+  event.update({ ...current(event), showPollId: pollId });
+}
+
+function onDeletePoll(polls: LiveView<Poll>, event: LiveView<MicEvent>, poll: Poll) {
+  if (current(event).showPollId === poll.id) {
+    onShow(event, null);
+  }
+
+  polls.delete(poll);
+}
+
+function newestFirst(polls: LiveView<Poll>): Poll[] {
+  let rank = { open: 0, draft: 1, closed: 2 };
+
+  return polls.sort((a, b) => rank[a.status] - rank[b.status] || +new Date(b.createdAt) - +new Date(a.createdAt));
+}
+
+function statusPill(poll: Poll): string {
+  switch (poll.status) {
+    case "open":
+      return "pill is-success";
+
+    case "draft":
+      return "pill";
+
+    default:
+      return "pill is-info";
+  }
+}
+
+<QuestionRow (q: Question, questions: LiveView<Question>, votes: number)>
+  <li class={["q", q.pinned && "is-pinned", q.answered && "is-done"]}>
+    <div class="q-votes" title={plural(votes, "vote")}>
+      <strong>{votes}</strong>
+      votes
+    </div>
+    <div class="q-body stack is-xs">
+      <p class="q-text">{q.body}</p>
+      <div class="q-meta cluster is-xs">
+        <span>{q.authorName || "Anonymous"} · {timeAgo(q.createdAt)}</span>
+        <span e:if={q.pinned} class="pill is-accent">Pinned</span>
+        <span e:if={q.answered} class="pill is-success">Answered</span>
+      </div>
+      <div class="q-actions cluster is-xs">
+        <div e:if={q.status === "pending"} class="cluster is-xs">
+          <button class="is-sm is-primary" onclick={() => setStatus(questions, q, "live")}>Approve</button>
+          <button class="is-sm is-ghost" onclick={() => setStatus(questions, q, "hidden")}>Hide</button>
+        </div>
+        <div e:elseif={q.status === "live"} class="cluster is-xs">
+          <button e:if={!q.answered} class="is-sm" onclick={() => onPin(questions, q)}>{q.pinned ? "Unpin" : "Pin"}</button>
+          <button class="is-sm" onclick={() => onAnswered(questions, q)}>{q.answered ? "Reopen" : "Mark answered"}</button>
+          <button class="is-sm is-ghost" onclick={() => setStatus(questions, q, "hidden")}>Hide</button>
+        </div>
+        <div e:else class="cluster is-xs">
+          <button class="is-sm" onclick={() => setStatus(questions, q, "live")}>Restore</button>
+        </div>
+      </div>
+    </div>
+  </li>
+</QuestionRow>
+
+<PollCard (
+  poll: Poll,
+  polls: LiveView<Poll>,
+  event: LiveView<MicEvent>,
+  responses: LiveView<PollResponse>,
+)>
+  <div class={["card", "poll-card", poll.status === "open" && "is-open"]}>
+    <div class="card-head">
+      <div class="stack is-xs">
+        <h3>{poll.prompt}</h3>
+        <span class="poll-sub">{poll.kind === "words" ? "Word cloud" : "Multiple choice"} · {plural(responseCount(poll, responses), "response")}</span>
+      </div>
+      <span class={statusPill(poll)}>{poll.status}</span>
+    </div>
+    <div class="card-body">
+      <ol e:if={poll.status === "draft" && poll.kind === "choice"} class="poll-options">
+        <li e:for={o of poll.options.map((text, i) => ({ id: String(i), text }))}>{o.text}</li>
+      </ol>
+      <p e:elseif={poll.status === "draft"} class="poll-sub">The audience answers with a word or two.</p>
+      <PollBars e:elseif={poll.kind === "choice"} tallies={tallyChoices(poll, responses)} />
+      <WordCloud e:else words={tallyWords(poll, responses)} />
+    </div>
+    <div class="card-foot">
+      <button e:if={poll.status !== "open"} class="is-sm is-primary" onclick={() => onOpenPoll(polls, event, poll)}>{poll.status === "draft" ? "Open poll" : "Reopen"}</button>
+      <button e:else class="is-sm is-primary" onclick={() => onClosePoll(polls, poll)}>Close poll</button>
+      <span e:if={current(event).showPollId === poll.id} class="on-screen">On screen</span>
+      <button e:elseif={poll.status !== "draft"} class="is-sm" onclick={() => onShow(event, poll.id)}>Show on screen</button>
+      <button e:if={poll.status === "draft"} class="is-sm is-ghost" onclick={() => onDeletePoll(polls, event, poll)}>Delete</button>
+    </div>
+  </div>
+</PollCard>
+
+<NewPoll (polls: LiveView<Poll>, private form: PollForm = blankPoll())>
+  <form class="card" onsubmit={() => onCreatePoll(polls, form, () => form = blankPoll())}>
+    <div class="card-head"><h2>New poll</h2></div>
+    <div class="card-body stack">
+      <div class="button-group" role="group" aria-label="Poll type">
+        <button type="button" class={["is-sm", form.kind === "choice" && "is-primary"]} onclick={() => onKind(form, "choice")}>Multiple choice</button>
+        <button type="button" class={["is-sm", form.kind === "words" && "is-primary"]} onclick={() => onKind(form, "words")}>Word cloud</button>
+      </div>
+      <div class="field">
+        <label for="poll-prompt">Question</label>
+        <input id="poll-prompt" value={form.prompt} placeholder={form.kind === "words" ? "One word for this quarter" : "Which should we build next?"}>
+      </div>
+      <div e:if={form.kind === "choice"} class="stack is-sm">
+        <div e:for={o of form.options} class="option-row row">
+          <input value={o.text} placeholder="Option" aria-label="Option">
+          <button type="button" class="is-sm is-ghost" aria-label="Remove option" onclick={() => onRemoveOption(form, o)}>✕</button>
+        </div>
+        <div><button type="button" class="is-sm is-ghost" onclick={() => onAddOption(form)}>+ Add option</button></div>
+      </div>
+      <p e:if={form.error} class="error" role="alert">{form.error}</p>
+    </div>
+    <div class="card-foot">
+      <button type="submit" class="is-sm is-primary">Save as draft</button>
+    </div>
+  </form>
+</NewPoll>
+
+<html lang="en" class="page-host-event" (
+  event: LiveView<MicEvent>,
+  questions: LiveView<Question>,
+  votes: LiveView<QuestionVote>,
+  polls: LiveView<Poll>,
+  responses: LiveView<PollResponse>,
+  origin: string,
+  private state: ConsoleState = { filter: "live" as Filter },
+)>
+  <Layout title={current(event).title} width="">
+    <nav slot="nav" class="cluster is-sm console-nav">
+      <a href="/host" class="button is-sm is-ghost">All events</a>
+      <a href={`/e/${current(event).code}`} target="_blank" rel="noopener" class="button is-sm">Audience view</a>
+      <a href={`/host/events/${current(event).id}/present`} target="_blank" rel="noopener" class="button is-sm is-primary">Presenter screen</a>
+    </nav>
+
+    <div class="stack is-xl">
+      <div class="console-head row">
+        <div class="stack is-xs">
+          <p class="eyebrow">Join at {origin}/e/{current(event).code}</p>
+          <h1>{current(event).title}</h1>
+        </div>
+        <div class="cluster">
+          <span class="pill console-code">{current(event).code}</span>
+          <label class="check-row row">
+            <input type="checkbox" checked={current(event).moderated} onchange={() => onModerated(event)}>
+            Review before posting
+          </label>
+        </div>
+      </div>
+
+      <div class="console-grid">
+        <section class="stack">
+          <div class="tabs console-tabs">
+            <div class="tab-list" role="tablist">
+              <button e:if={current(event).moderated || countIn(questions, "review") > 0}
+                      class={["tab", state.filter === "review" && "is-active"]}
+                      onclick={() => onFilter(state, "review")}>
+                Review<span class="tab-count">{countIn(questions, "review")}</span>
+              </button>
+              <button class={["tab", state.filter === "live" && "is-active"]} onclick={() => onFilter(state, "live")}>
+                Live<span class="tab-count">{countIn(questions, "live")}</span>
+              </button>
+              <button class={["tab", state.filter === "answered" && "is-active"]} onclick={() => onFilter(state, "answered")}>
+                Answered<span class="tab-count">{countIn(questions, "answered")}</span>
+              </button>
+              <button class={["tab", state.filter === "hidden" && "is-active"]} onclick={() => onFilter(state, "hidden")}>
+                Hidden<span class="tab-count">{countIn(questions, "hidden")}</span>
+              </button>
+            </div>
+          </div>
+
+          <ul class="q-list">
+            <QuestionRow e:for={q of filtered(questions, votes, state.filter)}
+                         {q}
+                         {questions}
+                         votes={voteCounts(votes).get(q.id) ?? 0} />
+          </ul>
+          <p e:if={countIn(questions, state.filter) === 0} class="q-empty">
+            {state.filter === "review" ? "Nothing waiting for review." : "No questions here yet."}
+          </p>
+        </section>
+
+        <aside class="console-side stack">
+          <div class="side-head row">
+            <h2>Polls</h2>
+            <button e:if={current(event).showPollId} class="is-sm" onclick={() => onShow(event, null)}>Show questions on screen</button>
+          </div>
+          <div class="poll-list">
+            <PollCard e:for={p of newestFirst(polls)} poll={p} {polls} {event} {responses} />
+          </div>
+          <NewPoll {polls} />
+        </aside>
+      </div>
+    </div>
+  </Layout>
+</html>

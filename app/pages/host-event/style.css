@@ -1,0 +1,170 @@
+@import "#app/shared/styles/page.css";
+@import "#app/shared/styles/questions.css";
+
+.console-head {
+  justify-content: space-between;
+  align-items: end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.console-head h1 {
+  margin-block: 0;
+}
+
+.console-code {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+
+.console-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24rem;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.console-side {
+  position: sticky;
+  top: var(--space-6);
+}
+
+.tab-count {
+  margin-left: var(--space-1);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+}
+
+.tab.is-active .tab-count {
+  color: var(--accent);
+}
+
+.q-actions {
+  margin-top: var(--space-3);
+}
+
+.poll-list {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.poll-card.is-open {
+  border-color: var(--accent-edge);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.poll-card .card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: var(--space-3);
+}
+
+.poll-card h3 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.poll-sub {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.poll-options {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--ink-soft);
+}
+
+.poll-card .card-foot {
+  justify-content: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.option-row {
+  gap: var(--space-2);
+}
+
+.option-row input {
+  flex: 1;
+}
+
+.on-screen {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.on-screen::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+.console-tabs .tab-list {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.console-tabs .tab {
+  flex: none;
+}
+
+@media (max-width: 60rem) {
+  .console-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .console-side {
+    position: static;
+  }
+}
+
+.check-row {
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.side-head {
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.side-head h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+@media (max-width: 30rem) {
+  .console-head h1 {
+    font-size: var(--text-3xl);
+  }
+
+  .console-tabs .tab {
+    padding-inline: var(--space-2);
+  }
+}
+
+@media (max-width: 40rem) {
+  .layout-header-inner:has(.console-nav) {
+    flex-wrap: wrap;
+  }
+
+  .layout-header-inner > .cluster:has(.console-nav),
+  .console-nav {
+    flex-basis: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .console-nav .button {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}

@@ -1,0 +1,94 @@
+import "./style.css";
+import { redirect, session } from "@elements/app";
+import { Layout } from "#app/shared/templates/layout";
+import { signout } from "#app/shared/services/auth";
+import { createEvent, EventForm } from "#app/shared/services/events";
+
+export interface EventSummary {
+  id: string;
+  title: string;
+  code: string;
+  createdAt: Date;
+  questionCount: number;
+  pollCount: number;
+}
+
+function onCreate(form: EventForm) {
+  try {
+    createEvent(form);
+    form.error = "";
+  } catch (err: any) {
+    form.error = err.message;
+  }
+}
+
+function onSignout() {
+  signout();
+  redirect("/signin");
+}
+
+function formatDate(d: Date): string {
+  return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+<HostNav>
+  <nav class="cluster is-sm">
+    <span class="hint">{session.get("userName")}</span>
+    <button class="is-sm is-ghost" onclick={() => onSignout()}>Sign out</button>
+  </nav>
+</HostNav>
+
+<html lang="en" class="page-host" (
+  events: EventSummary[],
+  private form: EventForm = { title: "", moderated: true, error: "" },
+)>
+  <Layout title="Your events">
+    <HostNav slot="nav" />
+
+    <div class="stack is-xl">
+      <div class="host-head row">
+        <div class="stack is-xs">
+          <p class="eyebrow">Host</p>
+          <h1>Your events</h1>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>New event</h2></div>
+        <div class="card-body">
+          <form class="stack" onsubmit={() => onCreate(form)}>
+            <div class="create-form cluster">
+              <div class="field">
+                <label for="title">Name</label>
+                <input id="title" name="title" value={form.title} placeholder="Friday all-hands" required>
+              </div>
+              <button type="submit" class="is-primary">Create event</button>
+            </div>
+            <label class="check-row row is-start">
+              <input type="checkbox" checked={form.moderated}>
+              Review questions before the audience sees them
+            </label>
+            <p e:if={form.error} class="error" role="alert">{form.error}</p>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="event-list">
+          <a e:for={e of events} href={`/host/events/${e.id}`} class="event-link">
+            <span class="stack is-xs">
+              <span class="event-title">{e.title}</span>
+              <span class="event-meta">{formatDate(e.createdAt)} · {plural(e.questionCount, "question")} · {plural(e.pollCount, "poll")}</span>
+            </span>
+            <span class="pill event-code">{e.code}</span>
+          </a>
+          <p e:if={events.length === 0} class="empty">No events yet. Create one above and share its code.</p>
+        </div>
+      </div>
+    </div>
+  </Layout>
+</html>

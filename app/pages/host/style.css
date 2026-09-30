@@ -1,0 +1,69 @@
+@import "#app/shared/styles/page.css";
+
+.host-head {
+  justify-content: space-between;
+  align-items: end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.host-head h1 {
+  margin-block: 0;
+}
+
+.event-list {
+  padding: 0;
+}
+
+.event-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.event-link:hover {
+  background: var(--bg-soft);
+}
+
+.event-link + .event-link {
+  border-top: 1px solid var(--rule);
+}
+
+.event-title {
+  font-weight: var(--weight-semibold);
+}
+
+.event-meta {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.event-code {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.08em;
+}
+
+.create-form {
+  align-items: end;
+}
+
+.create-form .field {
+  flex: 1;
+  min-width: 14rem;
+}
+
+.empty {
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.check-row {
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}

@@ -1,0 +1,275 @@
+import "./style.css";
+import { LiveView } from "@elements/app";
+import { Layout } from "#app/shared/templates/layout";
+import { PollBars, WordCloud } from "#app/shared/templates/poll-results";
+import { askQuestion } from "#app/shared/services/events";
+import { Voter, loadVoter, saveName } from "#app/shared/services/voter";
+import {
+  MicEvent,
+  Question,
+  QuestionVote,
+  Poll,
+  PollResponse,
+  MAX_QUESTION,
+  MAX_WORD,
+  normalizeWord,
+  rankQuestions,
+  voteCounts,
+  tallyChoices,
+  tallyWords,
+  responseCount,
+} from "#app/shared/services/live";
+import { timeAgo, plural } from "#app/shared/services/format";
+
+type Sort = "top" | "new";
+
+interface AskState {
+  body: string;
+  name: string;
+  error: string;
+  notice: string;
+  sending: boolean;
+}
+
+interface ViewState {
+  sort: Sort;
+}
+
+interface WordForm {
+  word: string;
+  error: string;
+}
+
+function onAsk(event: MicEvent, voter: Voter, form: AskState, mine: Question[]) {
+  let body = form.body.trim();
+  if (!body || !voter.id || form.sending) {
+    return;
+  }
+
+  form.sending = true;
+  form.error = "";
+  saveName(form.name);
+
+  try {
+    let q = askQuestion(event.id, voter.id, { body, authorName: form.name });
+    form.body = "";
+
+    if (q.status === "pending") {
+      mine.push(q);
+      form.notice = "Sent to the host. It shows up here once it is approved.";
+    } else {
+      form.notice = "";
+    }
+  } catch (err: any) {
+    form.error = err.message;
+  }
+
+  form.sending = false;
+}
+
+function onInit(voter: Voter, ask: AskState) {
+  loadVoter(voter);
+  ask.name = voter.name;
+}
+
+function myVote(votes: LiveView<QuestionVote>, voter: Voter, q: Question): QuestionVote | undefined {
+  return votes.find((v) => v.questionId === q.id && v.voterId === voter.id);
+}
+
+function onVote(votes: LiveView<QuestionVote>, voter: Voter, q: Question) {
+  if (!voter.id || q.answered) {
+    return;
+  }
+
+  let mine = myVote(votes, voter, q);
+  if (mine) {
+    votes.delete(mine);
+  } else {
+    votes.insert({ questionId: q.id, voterId: voter.id });
+  }
+}
+
+function openQuestions(questions: LiveView<Question>, votes: LiveView<QuestionVote>, sort: Sort): Question[] {
+  let open = questions.filter((q) => !q.answered);
+  if (sort === "new") {
+    return open.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  }
+
+  return rankQuestions(open, voteCounts(votes));
+}
+
+function answeredQuestions(questions: LiveView<Question>, votes: LiveView<QuestionVote>): Question[] {
+  return rankQuestions(questions.filter((q) => q.answered).map((q) => ({ ...q, pinned: false })), voteCounts(votes));
+}
+
+function stillPending(mine: Question[], questions: LiveView<Question>): Question[] {
+  return mine.filter((q) => !questions.find((x) => x.id === q.id));
+}
+
+function onSort(view: ViewState, sort: Sort) {
+  view.sort = sort;
+}
+
+function myResponse(responses: LiveView<PollResponse>, voter: Voter, poll: Poll): PollResponse | undefined {
+  return responses.find((r) => r.pollId === poll.id && r.voterId === voter.id);
+}
+
+function onChoose(responses: LiveView<PollResponse>, voter: Voter, poll: Poll, choice: number) {
+  if (!voter.id || myResponse(responses, voter, poll)) {
+    return;
+  }
+
+  responses.insert({ pollId: poll.id, voterId: voter.id, choice, word: null });
+}
+
+function onWord(responses: LiveView<PollResponse>, voter: Voter, poll: Poll, form: WordForm) {
+  let word = normalizeWord(form.word);
+  if (!word) {
+    form.error = "Enter a word.";
+    return;
+  }
+
+  if (!voter.id || myResponse(responses, voter, poll)) {
+    return;
+  }
+
+  form.error = "";
+  responses.insert({ pollId: poll.id, voterId: voter.id, choice: null, word }, () => form.word = "");
+}
+
+function indexed(options: string[]) {
+  return options.map((label, i) => ({ id: String(i), i, label }));
+}
+
+<AudienceQuestion (
+  q: Question,
+  votes: LiveView<QuestionVote>,
+  voter: Voter,
+)>
+  <li class={["q", q.pinned && "is-pinned", q.answered && "is-done"]}>
+    <button class={["q-votes", myVote(votes, voter, q) && "is-active"]}
+            disabled={q.answered || !voter.id}
+            aria-pressed={myVote(votes, voter, q) ? "true" : "false"}
+            aria-label={myVote(votes, voter, q) ? "Remove your vote" : "Upvote"}
+            onclick={() => onVote(votes, voter, q)}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15l7-7 7 7"/></svg>
+      <strong>{voteCounts(votes).get(q.id) ?? 0}</strong>
+    </button>
+    <div class="q-body stack is-xs">
+      <p class="q-text">{q.body}</p>
+      <div class="q-meta cluster is-xs">
+        <span>{q.authorName || "Anonymous"} · {timeAgo(q.createdAt)}</span>
+        <span e:if={q.pinned} class="pill is-accent">Answering now</span>
+        <span e:if={q.answered} class="pill is-success">Answered</span>
+        <span e:if={q.askerId === voter.id} class="pill">Yours</span>
+      </div>
+    </div>
+  </li>
+</AudienceQuestion>
+
+<LivePoll (
+  poll: Poll,
+  responses: LiveView<PollResponse>,
+  voter: Voter,
+  private form: WordForm = { word: "", error: "" },
+)>
+  <section class="card live-poll" aria-live="polite">
+    <div class="card-head">
+      <span class="live-dot" aria-hidden="true"></span>
+      <h2>{poll.prompt}</h2>
+    </div>
+    <div class="card-body stack">
+      <div e:if={myResponse(responses, voter, poll)} class="stack">
+        <PollBars e:if={poll.kind === "choice"} tallies={tallyChoices(poll, responses)} />
+        <WordCloud e:else words={tallyWords(poll, responses)} />
+        <p class="poll-note">Thanks, your answer is in. Results update live · {plural(responseCount(poll, responses), "response")}.</p>
+      </div>
+      <div e:elseif={poll.kind === "choice"} class="choice-list">
+        <button e:for={o of indexed(poll.options)}
+                disabled={!voter.id}
+                onclick={() => onChoose(responses, voter, poll, o.i)}>{o.label}</button>
+      </div>
+      <form e:else class="stack is-sm" onsubmit={() => onWord(responses, voter, poll, form)}>
+        <div class="word-row row">
+          <input value={form.word} maxlength={MAX_WORD} placeholder="A word or two" aria-label="Your answer" autocomplete="off">
+          <button type="submit" class="is-primary" disabled={!voter.id}>Send</button>
+        </div>
+        <p e:if={form.error} class="error" role="alert">{form.error}</p>
+      </form>
+    </div>
+  </section>
+</LivePoll>
+
+<html lang="en" class="page-audience" (
+  event: MicEvent,
+  questions: LiveView<Question>,
+  votes: LiveView<QuestionVote>,
+  polls: LiveView<Poll>,
+  responses: LiveView<PollResponse>,
+  private voter: Voter = { id: "", name: "" },
+  private ask: AskState = { body: "", name: "", error: "", notice: "", sending: false },
+  private view: ViewState = { sort: "top" as Sort },
+  private mine: Question[] = [],
+) oninit={() => onInit(voter, ask)}>
+  <Layout title={event.title}>
+    <div class="stack is-xl">
+      <div class="aud-head row">
+        <div class="stack is-xs">
+          <p class="eyebrow">Live Q&amp;A</p>
+          <h1>{event.title}</h1>
+        </div>
+        <span class="pill aud-code">{event.code}</span>
+      </div>
+
+      <LivePoll e:for={p of polls} poll={p} {responses} {voter} />
+
+      <form class="card ask" onsubmit={() => onAsk(event, voter, ask, mine)}>
+        <div class="card-body stack is-sm">
+          <label for="ask-body" class="sr-only">Your question</label>
+          <textarea id="ask-body" value={ask.body} maxlength={MAX_QUESTION} placeholder="Ask the speaker a question"></textarea>
+          <p e:if={ask.error} class="error" role="alert">{ask.error}</p>
+          <p e:if={ask.notice} class="hint" role="status">{ask.notice}</p>
+          <div class="ask-foot row">
+            <input class="ask-name is-sm" value={ask.name} placeholder="Your name (optional)" aria-label="Your name" maxlength={40} autocomplete="name">
+            <div class="cluster is-sm">
+              <span class="char-count">{ask.body.length}/{MAX_QUESTION}</span>
+              <button type="submit" class="is-primary" disabled={!ask.body.trim() || ask.sending}>Ask</button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <section class="stack">
+        <div class="list-head row">
+          <h2>Questions</h2>
+          <div class="button-group" role="group" aria-label="Sort questions">
+            <button class={["is-sm", view.sort === "top" && "is-primary"]} onclick={() => onSort(view, "top")}>Top</button>
+            <button class={["is-sm", view.sort === "new" && "is-primary"]} onclick={() => onSort(view, "new")}>Newest</button>
+          </div>
+        </div>
+
+        <ul e:if={stillPending(mine, questions).length} class="q-list">
+          <li e:for={q of stillPending(mine, questions)} class="q is-mine-pending">
+            <div class="q-votes"><strong>0</strong>votes</div>
+            <div class="q-body stack is-xs">
+              <p class="q-text">{q.body}</p>
+              <div class="q-meta cluster is-xs"><span class="pill is-warning">Waiting for approval</span></div>
+            </div>
+          </li>
+        </ul>
+
+        <ul class="q-list">
+          <AudienceQuestion e:for={q of openQuestions(questions, votes, view.sort)} {q} {votes} {voter} />
+        </ul>
+        <p e:if={questions.filter((q) => !q.answered).length === 0} class="q-empty">No questions yet. Be the first to ask.</p>
+      </section>
+
+      <section e:if={answeredQuestions(questions, votes).length} class="stack">
+        <div class="list-head row"><h2>Answered</h2></div>
+        <ul class="q-list">
+          <AudienceQuestion e:for={q of answeredQuestions(questions, votes)} {q} {votes} {voter} />
+        </ul>
+      </section>
+    </div>
+  </Layout>
+</html>
