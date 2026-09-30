@@ -1,0 +1,57 @@
+import "./style.css";
+import { redirect } from "@elements/app";
+import { Layout, BrandMark } from "#app/shared/templates/layout";
+import { findEvent } from "#app/shared/services/events";
+
+interface JoinForm {
+  code: string;
+  error: string;
+}
+
+function onSubmit(form: JoinForm) {
+  try {
+    let code = findEvent(form.code);
+    form.error = "";
+    redirect(`/e/${code}`);
+  } catch (err: any) {
+    form.error = err.message;
+  }
+}
+
+<html lang="en" class="page-home" (
+  signedIn: boolean,
+  private form: JoinForm = { code: "", error: "" },
+)>
+  <Layout title="Join an event">
+    <nav slot="nav" class="cluster is-sm">
+      <a e:if={signedIn} href="/host" class="button is-sm">Your events</a>
+      <a e:else href="/signin" class="button is-sm is-ghost">Host sign in</a>
+    </nav>
+
+    <section class="join stack is-xl">
+      <div class="stack is-md">
+        <p class="eyebrow">Live Q&amp;A and polls</p>
+        <h1 class="join-title">Pass the <em>mic.</em></h1>
+        <p class="lede">Enter the code on the screen to ask questions, upvote the ones you want answered, and vote in polls. No account needed.</p>
+      </div>
+
+      <form class="join-form stack" onsubmit={() => onSubmit(form)}>
+        <label for="code" class="sr-only">Event code</label>
+        <input id="code"
+               name="code"
+               class={["join-code", form.error && "is-error"]}
+               value={form.code}
+               placeholder="CODE"
+               maxlength={10}
+               autocomplete="off"
+               autocapitalize="characters"
+               spellcheck={false}
+               required>
+        <p e:if={form.error} class="error" role="alert">{form.error}</p>
+        <button type="submit" class="is-primary is-lg is-block">Join</button>
+      </form>
+
+      <p class="join-host">Running a talk? <a href="/signin" class="link-action">Host an event</a></p>
+    </section>
+  </Layout>
+</html>

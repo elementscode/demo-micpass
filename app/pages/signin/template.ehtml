@@ -1,0 +1,82 @@
+import "./style.css";
+import { redirect } from "@elements/app";
+import { Layout } from "#app/shared/templates/layout";
+import { signin } from "#app/shared/services/auth";
+
+export const DEMO_EMAIL = "host@micpass.dev";
+
+export const DEMO_PASSWORD = "micpass-demo";
+
+interface SigninForm {
+  email: string;
+  password: string;
+  error: string;
+}
+
+function onSubmit(form: SigninForm) {
+  try {
+    signin(form.email, form.password);
+    form.error = "";
+    redirect("/host");
+  } catch (err: any) {
+    form.error = err.message;
+  }
+}
+
+function onUseDemo(form: SigninForm) {
+  form.email = DEMO_EMAIL;
+  form.password = DEMO_PASSWORD;
+  onSubmit(form);
+}
+
+<html lang="en" class="page-signin" (
+  private form: SigninForm = { email: "", password: "", error: "" },
+)>
+  <Layout title="Host sign in">
+    <div class="auth stack is-lg">
+      <div class="stack is-xs">
+        <h1>Host sign in</h1>
+        <p class="hint">Run Q&amp;A and polls for your talks and meetings.</p>
+      </div>
+
+      <div class="callout is-accent auth-demo">
+        <div class="callout-title">Demo host</div>
+        <div class="callout-body stack is-sm">
+          <p>Email <code>{DEMO_EMAIL}</code><br>Password <code>{DEMO_PASSWORD}</code></p>
+          <div><button type="button" class="is-sm" onclick={() => onUseDemo(form)}>Sign in as demo host</button></div>
+        </div>
+      </div>
+
+      <form class="stack" onsubmit={() => onSubmit(form)}>
+        <p e:if={form.error} class="error" role="alert">{form.error}</p>
+
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email"
+                 name="email"
+                 type="email"
+                 value={form.email}
+                 autocomplete="email"
+                 autocapitalize="none"
+                 spellcheck={false}
+                 placeholder="you@example.com"
+                 required>
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password"
+                 name="password"
+                 type="password"
+                 value={form.password}
+                 autocomplete="current-password"
+                 required>
+        </div>
+
+        <button type="submit" class="is-primary is-block">Sign in</button>
+
+        <p class="hint">New here? <a href="/signup" class="link-action">Create a host account</a></p>
+      </form>
+    </div>
+  </Layout>
+</html>

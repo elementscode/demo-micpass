@@ -1,0 +1,48 @@
+import "./style.css";
+import { Tally, CloudWord } from "#app/shared/services/live";
+
+function percent(share: number): string {
+  return `${Math.round(share * 100)}%`;
+}
+
+function isLeader(t: Tally, tallies: Tally[]): boolean {
+  let max = Math.max(...tallies.map((x) => x.count));
+
+  return max > 0 && t.count === max;
+}
+
+function wordSize(w: CloudWord, big: boolean): string {
+  let [min, max] = big ? [1.5, 6] : [1, 2.75];
+
+  return `${(min + (max - min) * w.weight).toFixed(2)}rem`;
+}
+
+function withIds(tallies: Tally[]) {
+  return tallies.map((t, i) => ({ ...t, id: String(i) }));
+}
+
+<PollBars (tallies: Tally[], big: boolean = false)>
+  <ul class={["bars", big && "is-big"]}>
+    <li e:for={t of withIds(tallies)}
+        class={["bar", isLeader(t, tallies) && "is-leader"]}
+        title={`${t.label}: ${t.count} (${percent(t.share)})`}>
+      <div class="bar-head">
+        <span class="bar-label">{t.label}</span>
+        <span class="bar-value"><strong>{percent(t.share)}</strong> · {t.count}</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style={`width: ${percent(t.share)}`}></div>
+      </div>
+    </li>
+  </ul>
+</PollBars>
+
+<WordCloud (words: CloudWord[], big: boolean = false)>
+  <div e:if={words.length} class="cloud">
+    <span e:for={w of words}
+          class={["cloud-word", w.weight === 1 && "is-top"]}
+          style={`font-size: ${wordSize(w, big)}`}
+          title={`${w.word}: ${w.count}`}>{w.word}</span>
+  </div>
+  <p e:else class="results-empty">No words yet.</p>
+</WordCloud>

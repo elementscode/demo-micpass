@@ -1,0 +1,113 @@
+import "./style.css";
+import { LiveView } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { BrandMark } from "#app/shared/templates/layout";
+import { PollBars, WordCloud } from "#app/shared/templates/poll-results";
+import {
+  MicEvent,
+  Question,
+  QuestionVote,
+  Poll,
+  PollResponse,
+  rankQuestions,
+  voteCounts,
+  tallyChoices,
+  tallyWords,
+  responseCount,
+} from "#app/shared/services/live";
+import { plural } from "#app/shared/services/format";
+
+const TOP = 4;
+
+function current(event: LiveView<MicEvent>): MicEvent {
+  return event.at(0)!;
+}
+
+function shownPoll(event: LiveView<MicEvent>, polls: LiveView<Poll>): Poll | undefined {
+  let id = current(event).showPollId;
+
+  return id ? polls.find((p) => p.id === id) : undefined;
+}
+
+function pinned(questions: LiveView<Question>): Question | undefined {
+  return questions.find((q) => q.pinned && !q.answered);
+}
+
+function upNext(questions: LiveView<Question>, votes: LiveView<QuestionVote>): Question[] {
+  let open = questions.filter((q) => !q.answered && !q.pinned);
+
+  return rankQuestions(open, voteCounts(votes)).slice(0, TOP);
+}
+
+<Join (event: MicEvent, origin: string)>
+  <div class="stage-join">
+    <span class="stage-join-url">Join at <strong>{origin}</strong></span>
+    <span class="stage-code">{event.code}</span>
+  </div>
+</Join>
+
+<PollStage (poll: Poll, responses: LiveView<PollResponse>)>
+  <section class="stage-poll">
+    <div class="stack is-sm">
+      <p class="stage-heading">{poll.status === "open" ? "Voting open" : "Results"} · {plural(responseCount(poll, responses), "response")}</p>
+      <h1 class="stage-poll-prompt">{poll.prompt}</h1>
+    </div>
+    <PollBars e:if={poll.kind === "choice"} tallies={tallyChoices(poll, responses)} big={true} />
+    <WordCloud e:else words={tallyWords(poll, responses)} big={true} />
+  </section>
+</PollStage>
+
+<QuestionStage (questions: LiveView<Question>, votes: LiveView<QuestionVote>)>
+  <section class="stage-body">
+    <div e:if={pinned(questions)} class="now">
+      <span class="now-label"><span class="now-dot"></span>Now answering</span>
+      <p class="now-text">{pinned(questions)!.body}</p>
+      <span class="now-meta">{pinned(questions)!.authorName || "Anonymous"} · {plural(voteCounts(votes).get(pinned(questions)!.id) ?? 0, "vote")}</span>
+    </div>
+
+    <div e:if={upNext(questions, votes).length} class="stack">
+      <h2 class="stage-heading">Top questions</h2>
+      <ol class="top-list">
+        <li e:for={q of upNext(questions, votes)} class="top">
+          <span class="top-votes"><strong>{voteCounts(votes).get(q.id) ?? 0}</strong>votes</span>
+          <div class="stack is-xs">
+            <p class="top-text">{q.body}</p>
+            <span class="top-meta">{q.authorName || "Anonymous"}</span>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <div e:if={!pinned(questions) && !upNext(questions, votes).length} class="stage-empty">
+      <p>Join with the code above and ask away.</p>
+    </div>
+  </section>
+</QuestionStage>
+
+<html lang="en" class="page-present" data-theme="dark" (
+  event: LiveView<MicEvent>,
+  questions: LiveView<Question>,
+  votes: LiveView<QuestionVote>,
+  polls: LiveView<Poll>,
+  responses: LiveView<PollResponse>,
+  origin: string,
+)>
+  <head>
+    <title>{current(event).title} · micpass</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <main class="stage">
+      <header class="stage-top">
+        <div class="stage-title row">
+          <BrandMark />
+          {current(event).title}
+        </div>
+        <Join event={current(event)} {origin} />
+      </header>
+
+      <PollStage e:if={shownPoll(event, polls)} poll={shownPoll(event, polls)!} {responses} />
+      <QuestionStage e:else {questions} {votes} />
+    </main>
+  </body>
+</html>

@@ -1,0 +1,45 @@
+@import "#app/shared/styles/page.css";
+
+.join {
+  max-width: 30rem;
+  margin-inline: auto;
+  padding-block: var(--space-12) var(--space-8);
+  text-align: center;
+}
+
+.join-title {
+  margin-block: 0;
+  font-size: clamp(var(--text-4xl), 7vw, var(--text-6xl));
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-none);
+  letter-spacing: -0.04em;
+}
+
+.join-title em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+.join-form {
+  width: 100%;
+}
+
+.join-code {
+  height: auto;
+  padding: var(--space-4) var(--space-5);
+  font-family: var(--font-mono);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.25em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.join-code::placeholder {
+  letter-spacing: 0.25em;
+}
+
+.join-host {
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
