@@ -1,12 +1,12 @@
-![Micpass, a live Q&A and polling app built with Elements: the host console for a Q3 all-hands, with audience questions ranked by votes, a pinned question, and an open poll's results updating as people vote.](TBD)
+![Micpass, a live Q&A and polling app built with Elements: the host console for a Q3 all-hands, with audience questions ranked by votes, a pinned question, and an open poll's results updating as people vote.](https://elements.dev/demos/01a0f3c8-b03e-7fa7-84c4-5f186a0fe28a)
 
 # Micpass
 
 > A demo app built with [Elements](https://elements.dev).
 
-Hosts open an event with a join code, the audience asks and upvotes questions and votes in polls, and a presenter screen shows the top questions or live results.
+Join codes, audience questions ranked by upvotes, live polls and word clouds, and a presenter screen for the projector.
 
-**Demo:** [Micpass](TBD)
+**Demo:** [Micpass](https://elements.dev/demos/01a0f3c8-b03e-7fa7-84c4-5f186a0fe28a)
 
 ## Agent specs
 
