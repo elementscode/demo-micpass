@@ -37,7 +37,7 @@ Micpass needed questions, votes and poll results that move on every phone and th
 
 ### What the project server gave the agent
 
-The project server runs alongside the agent and answers as soon as a file is saved, so every question came back right away: does it type-check, does it build, did the migration apply, do the tests pass. The agent asked 27 times in 20 minutes and kept moving after each answer. Four times the build caught a mistake, among them a string passed where a `Filter` belonged and a test callback missing a Promise return type, each with a message that named the fix. It read the manual for each part as it reached it, 48 pages from `livetable/partitions` to `recipes/likes-toggle`.
+The project server runs alongside the agent and answers as soon as a file is saved: it type-checks the templates, TypeScript and SQL, applies migrations and reruns the tests, so every question came back right away and the agent kept building.
 
 ### What shipped
 
