@@ -33,12 +33,15 @@ Micpass needed questions, votes and poll results that move on every phone and th
 - **Writes straight from the page.** The audience upvotes and answers polls by writing to the views. The insert handlers do the checking: one vote per question, one answer per poll, only on a live question or an open poll, with word cloud answers trimmed and lowercased.
 - **Moderation in the handlers.** The `questions` update handler lets only the event's host approve, hide, pin or mark a question answered, checked against the event on the stored row. A moderated event holds new questions as pending until the host approves them.
 - **Server calls as function calls.** `createEvent` in `app/shared/services/events.ts` is an `@rpc` that mints a short join code, `findEvent` turns a typed code into the audience page at `/e/:code`, and `askQuestion` posts a question.
-- **An audience with no account.** `app/shared/services/voter.ts` gives each browser a voter id it keeps, which the handlers use to count one vote per person.
 - **Data from SQL files.** Two migrations define the app and seed a host and one event with 13 questions, 167 votes, two finished polls with 80 responses between them and a draft poll ready to open.
 
-### What the agent got from the tooling
+### What the project server gave the agent
 
-The agent ran 27 builds in 20 minutes. By the build's own timer, the median build finished in 52 milliseconds, so it checked each edit and kept going. The build caught errors in four of them, among them a string passed where a `Filter` belonged and a test callback missing a Promise return type, each with a message that named the fix. It read 48 manual topics as it went, from `livetable/partitions` to `recipes/likes-toggle` and `style/components/tabs`, then wrote 49 tests and checked its pages in a real browser, including at phone width.
+The project server runs alongside the agent and answers as soon as a file is saved, so every question came back right away: does it type-check, does it build, did the migration apply, do the tests pass. The agent asked 27 times in 20 minutes and kept moving after each answer. Four times the build caught a mistake, among them a string passed where a `Filter` belonged and a test callback missing a Promise return type, each with a message that named the fix. It read the manual for each part as it reached it, 48 pages from `livetable/partitions` to `recipes/likes-toggle`.
+
+### What shipped
+
+The app type-checks with zero errors and all 49 tests pass. Every page was checked on desktop and phone before publishing. The repo was installed fresh from GitHub and run before the demo went live.
 
 Start in `app/shared/services/live.ts`.
 
