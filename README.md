@@ -30,10 +30,15 @@ Micpass needed questions, votes and poll results that move on every phone and th
 ### What Elements gave the app
 
 - **Live questions, votes and polls.** Events, questions, votes, polls and answers are LiveTables, so a vote reorders the questions and a poll answer grows its bar on every phone and the projector the moment it is cast.
+
 - **Votes straight from the page.** The audience upvotes and answers polls by writing to the live tables, and the server checks each write: one vote per question, one answer per poll, only on a live question or an open poll.
+
 - **Moderation.** Only the event's host approves, hides, pins or marks a question answered, and a moderated event holds new questions until the host approves them.
+
 - **Server calls as function calls.** Creating an event mints a short join code, joining turns a typed code into the event page, and asking a question is one more `@rpc` call.
+
 - **An audience with no account.** Each browser keeps its own voter id, which the server uses to count one vote per person.
+
 - **Data from SQL files.** Migrations define the app and seed a host and one event with 13 questions, 167 votes, two finished polls and a draft poll ready to open.
 
 ### What the project server gave the agent
