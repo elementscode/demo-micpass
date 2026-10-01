@@ -29,11 +29,12 @@ Micpass needed questions, votes and poll results that move on every phone and th
 
 ### What Elements gave the app
 
-- **Live questions, votes and polls.** `events`, `questions`, `questionVotes`, `polls` and `pollResponses` are five LiveTables in `app/shared/services/live.ts`. The audience page, the host console and the presenter screen each open views of them by event, so a vote reorders the list and a poll answer grows its bar on every screen the moment it is cast.
-- **Writes straight from the page.** The audience upvotes and answers polls by writing to the views. The insert handlers do the checking: one vote per question, one answer per poll, only on a live question or an open poll, with word cloud answers trimmed and lowercased.
-- **Moderation in the handlers.** The `questions` update handler lets only the event's host approve, hide, pin or mark a question answered, checked against the event on the stored row. A moderated event holds new questions as pending until the host approves them.
-- **Server calls as function calls.** `createEvent` in `app/shared/services/events.ts` is an `@rpc` that mints a short join code, `findEvent` turns a typed code into the audience page at `/e/:code`, and `askQuestion` posts a question.
-- **Data from SQL files.** Two migrations define the app and seed a host and one event with 13 questions, 167 votes, two finished polls with 80 responses between them and a draft poll ready to open.
+- **Live questions, votes and polls.** Events, questions, votes, polls and answers are LiveTables, so a vote reorders the questions and a poll answer grows its bar on every phone and the projector the moment it is cast.
+- **Votes straight from the page.** The audience upvotes and answers polls by writing to the live tables, and the server checks each write: one vote per question, one answer per poll, only on a live question or an open poll.
+- **Moderation.** Only the event's host approves, hides, pins or marks a question answered, and a moderated event holds new questions until the host approves them.
+- **Server calls as function calls.** Creating an event mints a short join code, joining turns a typed code into the event page, and asking a question is one more `@rpc` call.
+- **An audience with no account.** Each browser keeps its own voter id, which the server uses to count one vote per person.
+- **Data from SQL files.** Migrations define the app and seed a host and one event with 13 questions, 167 votes, two finished polls and a draft poll ready to open.
 
 ### What the project server gave the agent
 
@@ -42,8 +43,6 @@ The project server runs alongside the agent and answers as soon as a file is sav
 ### What shipped
 
 The app type-checks with zero errors and all 49 tests pass. Every page works on desktop and phone.
-
-Start in `app/shared/services/live.ts`.
 
 ## Seed data and demo account
 
