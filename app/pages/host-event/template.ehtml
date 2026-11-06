@@ -23,7 +23,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@elements/ui/tabs";
 import { Switch } from "@elements/ui/switch";
 import { Label } from "@elements/ui/label";
-import { ToggleGroup, ToggleGroupItem } from "@elements/ui/toggle-group";
+import { ToggleGroup, ToggleGroupItem, type ChangeDetails } from "@elements/ui/toggle-group";
 import { Field } from "@elements/ui/field";
 import { Input } from "@elements/ui/input";
 import { Alert } from "@elements/ui/alert";
@@ -120,7 +120,7 @@ function onFilter(state: ConsoleState, filter: string) {
   state.filter = filter as Filter;
 }
 
-function onKind(form: PollForm, kind: string, details: { cancel(): void }) {
+function onKind(form: PollForm, kind: string, details: ChangeDetails) {
   if (!kind) {
     details.cancel();
     return;
