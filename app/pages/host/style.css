@@ -52,8 +52,7 @@
   align-items: end;
 }
 
-.create-form .field,
-.create-form [data-slot="field"] {
+.create-form .field {
   flex: 1;
   min-width: 14rem;
 }
