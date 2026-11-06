@@ -182,6 +182,7 @@
 }
 
 .stage-empty {
+  --empty-measure: 60rem;
   padding-block: 10vh;
 }
 

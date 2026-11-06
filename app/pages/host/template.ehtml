@@ -3,6 +3,15 @@ import { redirect, session } from "@elements/app";
 import { Layout } from "#app/shared/templates/layout";
 import { signout } from "#app/shared/services/auth";
 import { createEvent, EventForm } from "#app/shared/services/events";
+import { Button } from "@elements/ui/button";
+import { Badge } from "@elements/ui/badge";
+import { Card, CardContent } from "@elements/ui/card";
+import { Field } from "@elements/ui/field";
+import { Input } from "@elements/ui/input";
+import { Checkbox } from "@elements/ui/checkbox";
+import { Label } from "@elements/ui/label";
+import { Alert } from "@elements/ui/alert";
+import { Empty } from "@elements/ui/empty";
 
 export interface EventSummary {
   id: string;
@@ -38,7 +47,7 @@ function plural(n: number, word: string): string {
 <HostNav>
   <nav class="cluster is-sm">
     <span class="hint">{session.get("userName")}</span>
-    <button class="is-sm is-ghost" onclick={() => onSignout()}>Sign out</button>
+    <Button size="sm" variant="ghost" onclick={() => onSignout()}>Sign out</Button>
   </nav>
 </HostNav>
 
@@ -57,38 +66,36 @@ function plural(n: number, word: string): string {
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-head"><h2>New event</h2></div>
-        <div class="card-body">
+      <Card title="New event" level={2}>
+        <CardContent>
           <form class="stack" onsubmit={() => onCreate(form)}>
             <div class="create-form cluster">
-              <div class="field">
-                <label for="title">Name</label>
-                <input id="title" name="title" value={form.title} placeholder="Friday all-hands" required>
-              </div>
-              <button type="submit" class="is-primary">Create event</button>
+              <Field label="Name" name="title" reserveError={false}>
+                <Input value={form.title} placeholder="Friday all-hands" required />
+              </Field>
+              <Button type="submit" variant="primary">Create event</Button>
             </div>
-            <label class="check-row row is-start">
-              <input type="checkbox" checked={form.moderated}>
+            <Label class="check-row">
+              <Checkbox checked={form.moderated} />
               Review questions before the audience sees them
-            </label>
-            <p e:if={form.error} class="error" role="alert">{form.error}</p>
+            </Label>
+            <Alert e:if={form.error} variant="danger" description={form.error} />
           </form>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div class="card">
+      <Card>
         <div class="event-list">
           <a e:for={e of events} href={`/host/events/${e.id}`} class="event-link">
             <span class="stack is-xs">
               <span class="event-title">{e.title}</span>
               <span class="event-meta">{formatDate(e.createdAt)} · {plural(e.questionCount, "question")} · {plural(e.pollCount, "poll")}</span>
             </span>
-            <span class="pill event-code">{e.code}</span>
+            <Badge variant="secondary" class="event-code">{e.code}</Badge>
           </a>
-          <p e:if={events.length === 0} class="empty">No events yet. Create one above and share its code.</p>
+          <Empty e:if={events.length === 0} description="No events yet. Create one above and share its code." />
         </div>
-      </div>
+      </Card>
     </div>
   </Layout>
 </html>
