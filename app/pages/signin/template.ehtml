@@ -2,6 +2,10 @@ import "./style.css";
 import { redirect } from "@elements/app";
 import { Layout } from "#app/shared/templates/layout";
 import { signin } from "#app/shared/services/auth";
+import { Button } from "@elements/ui/button";
+import { Field } from "@elements/ui/field";
+import { Input } from "@elements/ui/input";
+import { Alert, AlertTitle, AlertDescription } from "@elements/ui/alert";
 
 export const DEMO_EMAIL = "host@micpass.dev";
 
@@ -39,41 +43,33 @@ function onUseDemo(form: SigninForm) {
         <p class="hint">Run Q&amp;A and polls for your talks and meetings.</p>
       </div>
 
-      <div class="callout is-accent auth-demo">
-        <div class="callout-title">Demo host</div>
-        <div class="callout-body stack is-sm">
+      <Alert variant="accent" role="none" class="auth-demo">
+        <AlertTitle>Demo host</AlertTitle>
+        <AlertDescription class="stack is-sm">
           <p>Email <code>{DEMO_EMAIL}</code><br>Password <code>{DEMO_PASSWORD}</code></p>
-          <div><button type="button" class="is-sm" onclick={() => onUseDemo(form)}>Sign in as demo host</button></div>
-        </div>
-      </div>
+          <div><Button size="sm" onclick={() => onUseDemo(form)}>Sign in as demo host</Button></div>
+        </AlertDescription>
+      </Alert>
 
       <form class="stack" onsubmit={() => onSubmit(form)}>
-        <p e:if={form.error} class="error" role="alert">{form.error}</p>
+        <Alert e:if={form.error} variant="danger" description={form.error} />
 
-        <div class="field">
-          <label for="email">Email</label>
-          <input id="email"
-                 name="email"
-                 type="email"
+        <Field label="Email" name="email">
+          <Input type="email"
                  value={form.email}
-                 autocomplete="email"
-                 autocapitalize="none"
-                 spellcheck={false}
                  placeholder="you@example.com"
-                 required>
-        </div>
+                 required
+                 attrs={{ autocomplete: "email", autocapitalize: "none", spellcheck: "false" }} />
+        </Field>
 
-        <div class="field">
-          <label for="password">Password</label>
-          <input id="password"
-                 name="password"
-                 type="password"
+        <Field label="Password" name="password">
+          <Input type="password"
                  value={form.password}
-                 autocomplete="current-password"
-                 required>
-        </div>
+                 required
+                 attrs={{ autocomplete: "current-password" }} />
+        </Field>
 
-        <button type="submit" class="is-primary is-block">Sign in</button>
+        <Button type="submit" variant="primary" block>Sign in</Button>
 
         <p class="hint">New here? <a href="/signup" class="link-action">Create a host account</a></p>
       </form>
