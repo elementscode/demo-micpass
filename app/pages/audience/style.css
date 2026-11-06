@@ -23,14 +23,11 @@
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.live-poll .card-head {
+.live-title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.live-poll h2 {
-  margin: 0;
+  font-size: var(--text-lg);
 }
 
 .live-dot {
@@ -53,7 +50,7 @@
   gap: var(--space-2);
 }
 
-.choice-list button {
+.choice-list .button {
   justify-content: flex-start;
   height: auto;
   padding: var(--space-3) var(--space-4);
@@ -70,13 +67,8 @@
   gap: var(--space-2);
 }
 
-.word-row input {
+.word-row .input {
   flex: 1;
-}
-
-.ask textarea {
-  min-height: 5.5rem;
-  resize: vertical;
 }
 
 .ask-foot {
@@ -107,6 +99,10 @@
   font-size: var(--text-xl);
 }
 
+.ask-foot .button {
+  flex: none;
+}
+
 .q.is-mine-pending {
   border-style: dashed;
 }
@@ -115,8 +111,4 @@
   .live-dot {
     animation: none;
   }
-}
-
-.live-poll h2 {
-  font-size: var(--text-lg);
 }

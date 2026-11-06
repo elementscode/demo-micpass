@@ -45,26 +45,21 @@
   color: var(--ink);
 }
 
-button.q-votes {
+.toggle.q-votes {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-1);
   height: auto;
-  cursor: pointer;
 }
 
-button.q-votes svg {
-  display: block;
-}
-
-button.q-votes.is-active {
+.toggle.q-votes[data-state="on"] {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-ink);
 }
 
-button.q-votes.is-active strong {
+.toggle.q-votes[data-state="on"] strong {
   color: var(--accent-ink);
 }
 
@@ -81,13 +76,5 @@ button.q-votes.is-active strong {
 
 .q-meta {
   font-size: var(--text-sm);
-  color: var(--ink-soft);
-}
-
-.q-empty {
-  padding: var(--space-8) var(--space-4);
-  border: 1px dashed var(--rule);
-  border-radius: var(--radius-surface);
-  text-align: center;
   color: var(--ink-soft);
 }

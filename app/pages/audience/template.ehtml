@@ -20,6 +20,16 @@ import {
   responseCount,
 } from "#app/shared/services/live";
 import { timeAgo, plural } from "#app/shared/services/format";
+import { Button } from "@elements/ui/button";
+import { Badge } from "@elements/ui/badge";
+import { Card, CardHeader, CardTitle, CardContent } from "@elements/ui/card";
+import { Toggle } from "@elements/ui/toggle";
+import { ToggleGroup, ToggleGroupItem } from "@elements/ui/toggle-group";
+import { Input } from "@elements/ui/input";
+import { Textarea } from "@elements/ui/textarea";
+import { Alert } from "@elements/ui/alert";
+import { Empty } from "@elements/ui/empty";
+import { Icon } from "@elements/ui/icon";
 
 type Sort = "top" | "new";
 
@@ -106,8 +116,13 @@ function stillPending(mine: Question[], questions: LiveView<Question>): Question
   return mine.filter((q) => !questions.find((x) => x.id === q.id));
 }
 
-function onSort(view: ViewState, sort: Sort) {
-  view.sort = sort;
+function onSort(view: ViewState, sort: string, details: { cancel(): void }) {
+  if (!sort) {
+    details.cancel();
+    return;
+  }
+
+  view.sort = sort as Sort;
 }
 
 function myResponse(responses: LiveView<PollResponse>, voter: Voter, poll: Poll): PollResponse | undefined {
@@ -147,21 +162,22 @@ function indexed(options: string[]) {
   voter: Voter,
 )>
   <li class={["q", q.pinned && "is-pinned", q.answered && "is-done"]}>
-    <button class={["q-votes", myVote(votes, voter, q) && "is-active"]}
+    <Toggle class="q-votes"
+            variant="outline"
+            pressed={!!myVote(votes, voter, q)}
             disabled={q.answered || !voter.id}
-            aria-pressed={myVote(votes, voter, q) ? "true" : "false"}
-            aria-label={myVote(votes, voter, q) ? "Remove your vote" : "Upvote"}
-            onclick={() => onVote(votes, voter, q)}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15l7-7 7 7"/></svg>
+            label={myVote(votes, voter, q) ? "Remove your vote" : "Upvote"}
+            onPressedChange={() => onVote(votes, voter, q)}>
+      <Icon name="chevron-up" size={14} />
       <strong>{voteCounts(votes).get(q.id) ?? 0}</strong>
-    </button>
+    </Toggle>
     <div class="q-body stack is-xs">
       <p class="q-text">{q.body}</p>
       <div class="q-meta cluster is-xs">
         <span>{q.authorName || "Anonymous"} · {timeAgo(q.createdAt)}</span>
-        <span e:if={q.pinned} class="pill is-accent">Answering now</span>
-        <span e:if={q.answered} class="pill is-success">Answered</span>
-        <span e:if={q.askerId === voter.id} class="pill">Yours</span>
+        <Badge e:if={q.pinned} variant="accent">Answering now</Badge>
+        <Badge e:if={q.answered} variant="success">Answered</Badge>
+        <Badge e:if={q.askerId === voter.id} variant="secondary">Yours</Badge>
       </div>
     </div>
   </li>
@@ -173,30 +189,34 @@ function indexed(options: string[]) {
   voter: Voter,
   private form: WordForm = { word: "", error: "" },
 )>
-  <section class="card live-poll" aria-live="polite">
-    <div class="card-head">
-      <span class="live-dot" aria-hidden="true"></span>
-      <h2>{poll.prompt}</h2>
-    </div>
-    <div class="card-body stack">
+  <section aria-live="polite">
+    <Card class="live-poll">
+    <CardHeader>
+      <CardTitle level={2} class="live-title">
+        <span class="live-dot" aria-hidden="true"></span>
+        {poll.prompt}
+      </CardTitle>
+    </CardHeader>
+    <CardContent class="stack">
       <div e:if={myResponse(responses, voter, poll)} class="stack">
         <PollBars e:if={poll.kind === "choice"} tallies={tallyChoices(poll, responses)} />
         <WordCloud e:else words={tallyWords(poll, responses)} />
         <p class="poll-note">Thanks, your answer is in. Results update live · {plural(responseCount(poll, responses), "response")}.</p>
       </div>
       <div e:elseif={poll.kind === "choice"} class="choice-list">
-        <button e:for={o of indexed(poll.options)}
+        <Button e:for={o of indexed(poll.options)}
                 disabled={!voter.id}
-                onclick={() => onChoose(responses, voter, poll, o.i)}>{o.label}</button>
+                onclick={() => onChoose(responses, voter, poll, o.i)}>{o.label}</Button>
       </div>
       <form e:else class="stack is-sm" onsubmit={() => onWord(responses, voter, poll, form)}>
         <div class="word-row row">
-          <input value={form.word} maxlength={MAX_WORD} placeholder="A word or two" aria-label="Your answer" autocomplete="off">
-          <button type="submit" class="is-primary" disabled={!voter.id}>Send</button>
+          <Input value={form.word} placeholder="A word or two" attrs={{ maxlength: MAX_WORD, "aria-label": "Your answer", autocomplete: "off" }} />
+          <Button type="submit" variant="primary" disabled={!voter.id}>Send</Button>
         </div>
-        <p e:if={form.error} class="error" role="alert">{form.error}</p>
+        <Alert e:if={form.error} variant="danger" description={form.error} />
       </form>
-    </div>
+    </CardContent>
+    </Card>
   </section>
 </LivePoll>
 
@@ -218,34 +238,43 @@ function indexed(options: string[]) {
           <p class="eyebrow">Live Q&amp;A</p>
           <h1>{event.title}</h1>
         </div>
-        <span class="pill aud-code">{event.code}</span>
+        <Badge variant="secondary" class="aud-code">{event.code}</Badge>
       </div>
 
       <LivePoll e:for={p of polls} poll={p} {responses} {voter} />
 
-      <form class="card ask" onsubmit={() => onAsk(event, voter, ask, mine)}>
-        <div class="card-body stack is-sm">
-          <label for="ask-body" class="sr-only">Your question</label>
-          <textarea id="ask-body" value={ask.body} maxlength={MAX_QUESTION} placeholder="Ask the speaker a question"></textarea>
-          <p e:if={ask.error} class="error" role="alert">{ask.error}</p>
-          <p e:if={ask.notice} class="hint" role="status">{ask.notice}</p>
-          <div class="ask-foot row">
-            <input class="ask-name is-sm" value={ask.name} placeholder="Your name (optional)" aria-label="Your name" maxlength={40} autocomplete="name">
-            <div class="cluster is-sm">
-              <span class="char-count">{ask.body.length}/{MAX_QUESTION}</span>
-              <button type="submit" class="is-primary" disabled={!ask.body.trim() || ask.sending}>Ask</button>
+      <form class="ask" onsubmit={() => onAsk(event, voter, ask, mine)}>
+        <Card>
+          <CardContent class="stack is-sm">
+            <label for="ask-body" class="sr-only">Your question</label>
+            <Textarea value={ask.body} maxlength={MAX_QUESTION} placeholder="Ask the speaker a question" attrs={{ id: "ask-body" }} />
+            <Alert e:if={ask.error} variant="danger" description={ask.error} />
+            <Alert e:if={ask.notice} variant="info" role="status" description={ask.notice} />
+            <div class="ask-foot row">
+              <Input class="ask-name" size="sm" value={ask.name} placeholder="Your name (optional)" attrs={{ "aria-label": "Your name", maxlength: 40, autocomplete: "name" }} />
+              <div class="cluster is-sm">
+                <span class="char-count">{ask.body.length}/{MAX_QUESTION}</span>
+                <Button type="submit" variant="primary" loading={ask.sending} disabled={!ask.body.trim()}>Ask</Button>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </form>
 
       <section class="stack">
         <div class="list-head row">
           <h2>Questions</h2>
-          <div class="button-group" role="group" aria-label="Sort questions">
-            <button class={["is-sm", view.sort === "top" && "is-primary"]} onclick={() => onSort(view, "top")}>Top</button>
-            <button class={["is-sm", view.sort === "new" && "is-primary"]} onclick={() => onSort(view, "new")}>Newest</button>
-          </div>
+          <ToggleGroup type="single"
+                       value={view.sort}
+                       variant="outline"
+                       size="sm"
+                       spacing={0}
+                       label="Sort questions"
+                       class="sort-toggle"
+                       onValueChange={(sort, details) => onSort(view, sort, details)}>
+            <ToggleGroupItem value="top">Top</ToggleGroupItem>
+            <ToggleGroupItem value="new">Newest</ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
         <ul e:if={stillPending(mine, questions).length} class="q-list">
@@ -253,7 +282,7 @@ function indexed(options: string[]) {
             <div class="q-votes"><strong>0</strong>votes</div>
             <div class="q-body stack is-xs">
               <p class="q-text">{q.body}</p>
-              <div class="q-meta cluster is-xs"><span class="pill is-warning">Waiting for approval</span></div>
+              <div class="q-meta cluster is-xs"><Badge variant="warning">Waiting for approval</Badge></div>
             </div>
           </li>
         </ul>
@@ -261,7 +290,9 @@ function indexed(options: string[]) {
         <ul class="q-list">
           <AudienceQuestion e:for={q of openQuestions(questions, votes, view.sort)} {q} {votes} {voter} />
         </ul>
-        <p e:if={questions.filter((q) => !q.answered).length === 0} class="q-empty">No questions yet. Be the first to ask.</p>
+        <Empty e:if={questions.filter((q) => !q.answered).length === 0}
+               variant="outline"
+               description="No questions yet. Be the first to ask." />
       </section>
 
       <section e:if={answeredQuestions(questions, votes).length} class="stack">
