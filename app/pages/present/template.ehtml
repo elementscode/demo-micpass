@@ -16,6 +16,7 @@ import {
   responseCount,
 } from "#app/shared/services/live";
 import { plural } from "#app/shared/services/format";
+import { Empty } from "@elements/ui/empty";
 
 const TOP = 4;
 
@@ -78,9 +79,9 @@ function upNext(questions: LiveView<Question>, votes: LiveView<QuestionVote>): Q
       </ol>
     </div>
 
-    <div e:if={!pinned(questions) && !upNext(questions, votes).length} class="stage-empty">
-      <p>Join with the code above and ask away.</p>
-    </div>
+    <Empty e:if={!pinned(questions) && !upNext(questions, votes).length}
+           class="stage-empty"
+           description="Join with the code above and ask away." />
   </section>
 </QuestionStage>
 

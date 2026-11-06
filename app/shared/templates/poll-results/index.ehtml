@@ -1,5 +1,7 @@
 import "./style.css";
 import { Tally, CloudWord } from "#app/shared/services/live";
+import { Progress } from "@elements/ui/progress";
+import { Empty } from "@elements/ui/empty";
 
 function percent(share: number): string {
   return `${Math.round(share * 100)}%`;
@@ -23,16 +25,12 @@ function withIds(tallies: Tally[]) {
 
 <PollBars (tallies: Tally[], big: boolean = false)>
   <ul class={["bars", big && "is-big"]}>
-    <li e:for={t of withIds(tallies)}
-        class={["bar", isLeader(t, tallies) && "is-leader"]}
-        title={`${t.label}: ${t.count} (${percent(t.share)})`}>
-      <div class="bar-head">
-        <span class="bar-label">{t.label}</span>
-        <span class="bar-value"><strong>{percent(t.share)}</strong> · {t.count}</span>
-      </div>
-      <div class="bar-track">
-        <div class="bar-fill" style={`width: ${percent(t.share)}`}></div>
-      </div>
+    <li e:for={t of withIds(tallies)} title={`${t.label}: ${t.count} (${percent(t.share)})`}>
+      <Progress value={Math.round(t.share * 100)}
+                label={t.label}
+                showValue
+                getValueLabel={() => `${percent(t.share)} · ${t.count}`}
+                class={isLeader(t, tallies) ? "bar is-leader" : "bar"} />
     </li>
   </ul>
 </PollBars>
@@ -44,5 +42,5 @@ function withIds(tallies: Tally[]) {
           style={`font-size: ${wordSize(w, big)}`}
           title={`${w.word}: ${w.count}`}>{w.word}</span>
   </div>
-  <p e:else class="results-empty">No words yet.</p>
+  <Empty e:else description="No words yet." />
 </WordCloud>

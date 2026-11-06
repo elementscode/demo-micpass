@@ -182,17 +182,11 @@
 }
 
 .stage-empty {
-  display: grid;
-  place-items: center;
-  gap: var(--space-4);
   padding-block: 10vh;
-  text-align: center;
 }
 
-.stage-empty p {
-  margin: 0;
+.stage-empty .empty-description {
   font-size: clamp(var(--text-2xl), 3vw, var(--text-5xl));
-  color: var(--ink-soft);
 }
 
 @media (max-width: 40rem) {

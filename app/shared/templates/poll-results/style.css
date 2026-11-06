@@ -6,66 +6,30 @@
   list-style: none;
 }
 
-.bar-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--space-3);
-  margin-bottom: var(--space-1);
+.bar {
+  --progress-color: color-mix(in oklab, var(--accent) 55%, var(--bg-muted));
+  --progress-height: 0.625rem;
 }
 
-.bar-label {
-  font-weight: var(--weight-medium);
+.bar.is-leader {
+  --progress-color: var(--accent);
+}
+
+.bar .progress-label {
   color: var(--ink);
-}
-
-.bar-value {
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-soft);
-  white-space: nowrap;
-}
-
-.bar-value strong {
-  color: var(--ink);
-}
-
-.bar-track {
-  height: 0.625rem;
-  border-radius: var(--radius-full);
-  background: var(--bg-muted);
-  overflow: hidden;
-}
-
-.bar-fill {
-  height: 100%;
-  min-width: 2px;
-  border-radius: 0 4px 4px 0;
-  background: color-mix(in oklab, var(--accent) 55%, var(--bg-muted));
-  transition: width 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.bar.is-leader .bar-fill {
-  background: var(--accent);
 }
 
 .bars.is-big {
   gap: var(--space-8);
 }
 
-.bars.is-big .bar-label {
-  font-size: var(--text-3xl);
-}
-
-.bars.is-big .bar-value {
+.bars.is-big .bar {
+  --progress-height: 1.75rem;
   font-size: var(--text-2xl);
 }
 
-.bars.is-big .bar-track {
-  height: 1.75rem;
-}
-
-.bars.is-big .bar-fill {
-  border-radius: 0 8px 8px 0;
+.bars.is-big .progress-label {
+  font-size: var(--text-3xl);
 }
 
 .cloud {
@@ -87,10 +51,4 @@
 
 .cloud-word.is-top {
   color: var(--accent);
-}
-
-.results-empty {
-  padding: var(--space-6);
-  text-align: center;
-  color: var(--ink-soft);
 }
