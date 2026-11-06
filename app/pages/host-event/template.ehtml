@@ -17,6 +17,18 @@ import {
   responseCount,
 } from "#app/shared/services/live";
 import { timeAgo, plural } from "#app/shared/services/format";
+import { Button } from "@elements/ui/button";
+import { Badge } from "@elements/ui/badge";
+import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from "@elements/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@elements/ui/tabs";
+import { Switch } from "@elements/ui/switch";
+import { Label } from "@elements/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@elements/ui/toggle-group";
+import { Field } from "@elements/ui/field";
+import { Input } from "@elements/ui/input";
+import { Alert } from "@elements/ui/alert";
+import { Empty } from "@elements/ui/empty";
+import { Icon } from "@elements/ui/icon";
 
 type Filter = "review" | "live" | "answered" | "hidden";
 
@@ -104,12 +116,17 @@ function onModerated(event: LiveView<MicEvent>) {
   event.update({ ...ev, moderated: !ev.moderated });
 }
 
-function onFilter(state: ConsoleState, filter: Filter) {
-  state.filter = filter;
+function onFilter(state: ConsoleState, filter: string) {
+  state.filter = filter as Filter;
 }
 
-function onKind(form: PollForm, kind: PollKind) {
-  form.kind = kind;
+function onKind(form: PollForm, kind: string, details: { cancel(): void }) {
+  if (!kind) {
+    details.cancel();
+    return;
+  }
+
+  form.kind = kind as PollKind;
 }
 
 function onAddOption(form: PollForm) {
@@ -177,17 +194,30 @@ function newestFirst(polls: LiveView<Poll>): Poll[] {
   return polls.sort((a, b) => rank[a.status] - rank[b.status] || +new Date(b.createdAt) - +new Date(a.createdAt));
 }
 
-function statusPill(poll: Poll): string {
+function statusVariant(poll: Poll): "success" | "secondary" | "info" {
   switch (poll.status) {
     case "open":
-      return "pill is-success";
+      return "success";
 
     case "draft":
-      return "pill";
+      return "secondary";
 
     default:
-      return "pill is-info";
+      return "info";
   }
+}
+
+const FILTERS: { id: Filter, label: string }[] = [
+  { id: "review", label: "Review" },
+  { id: "live", label: "Live" },
+  { id: "answered", label: "Answered" },
+  { id: "hidden", label: "Hidden" },
+];
+
+function shownFilters(event: LiveView<MicEvent>, questions: LiveView<Question>): { id: Filter, label: string }[] {
+  let review = current(event).moderated || countIn(questions, "review") > 0;
+
+  return FILTERS.filter((f) => f.id !== "review" || review);
 }
 
 <QuestionRow (q: Question, questions: LiveView<Question>, votes: number)>
@@ -200,21 +230,21 @@ function statusPill(poll: Poll): string {
       <p class="q-text">{q.body}</p>
       <div class="q-meta cluster is-xs">
         <span>{q.authorName || "Anonymous"} · {timeAgo(q.createdAt)}</span>
-        <span e:if={q.pinned} class="pill is-accent">Pinned</span>
-        <span e:if={q.answered} class="pill is-success">Answered</span>
+        <Badge e:if={q.pinned} variant="accent">Pinned</Badge>
+        <Badge e:if={q.answered} variant="success">Answered</Badge>
       </div>
       <div class="q-actions cluster is-xs">
         <div e:if={q.status === "pending"} class="cluster is-xs">
-          <button class="is-sm is-primary" onclick={() => setStatus(questions, q, "live")}>Approve</button>
-          <button class="is-sm is-ghost" onclick={() => setStatus(questions, q, "hidden")}>Hide</button>
+          <Button size="sm" variant="primary" onclick={() => setStatus(questions, q, "live")}>Approve</Button>
+          <Button size="sm" variant="ghost" onclick={() => setStatus(questions, q, "hidden")}>Hide</Button>
         </div>
         <div e:elseif={q.status === "live"} class="cluster is-xs">
-          <button e:if={!q.answered} class="is-sm" onclick={() => onPin(questions, q)}>{q.pinned ? "Unpin" : "Pin"}</button>
-          <button class="is-sm" onclick={() => onAnswered(questions, q)}>{q.answered ? "Reopen" : "Mark answered"}</button>
-          <button class="is-sm is-ghost" onclick={() => setStatus(questions, q, "hidden")}>Hide</button>
+          <Button e:if={!q.answered} size="sm" onclick={() => onPin(questions, q)}>{q.pinned ? "Unpin" : "Pin"}</Button>
+          <Button size="sm" onclick={() => onAnswered(questions, q)}>{q.answered ? "Reopen" : "Mark answered"}</Button>
+          <Button size="sm" variant="ghost" onclick={() => setStatus(questions, q, "hidden")}>Hide</Button>
         </div>
         <div e:else class="cluster is-xs">
-          <button class="is-sm" onclick={() => setStatus(questions, q, "live")}>Restore</button>
+          <Button size="sm" onclick={() => setStatus(questions, q, "live")}>Restore</Button>
         </div>
       </div>
     </div>
@@ -227,56 +257,61 @@ function statusPill(poll: Poll): string {
   event: LiveView<MicEvent>,
   responses: LiveView<PollResponse>,
 )>
-  <div class={["card", "poll-card", poll.status === "open" && "is-open"]}>
-    <div class="card-head">
-      <div class="stack is-xs">
-        <h3>{poll.prompt}</h3>
-        <span class="poll-sub">{poll.kind === "words" ? "Word cloud" : "Multiple choice"} · {plural(responseCount(poll, responses), "response")}</span>
-      </div>
-      <span class={statusPill(poll)}>{poll.status}</span>
-    </div>
-    <div class="card-body">
+  <Card class={poll.status === "open" ? "poll-card is-open" : "poll-card"}>
+    <CardHeader>
+      <CardTitle>{poll.prompt}</CardTitle>
+      <CardDescription>{poll.kind === "words" ? "Word cloud" : "Multiple choice"} · {plural(responseCount(poll, responses), "response")}</CardDescription>
+      <CardAction><Badge variant={statusVariant(poll)}>{poll.status}</Badge></CardAction>
+    </CardHeader>
+    <CardContent>
       <ol e:if={poll.status === "draft" && poll.kind === "choice"} class="poll-options">
         <li e:for={o of poll.options.map((text, i) => ({ id: String(i), text }))}>{o.text}</li>
       </ol>
       <p e:elseif={poll.status === "draft"} class="poll-sub">The audience answers with a word or two.</p>
       <PollBars e:elseif={poll.kind === "choice"} tallies={tallyChoices(poll, responses)} />
       <WordCloud e:else words={tallyWords(poll, responses)} />
-    </div>
-    <div class="card-foot">
-      <button e:if={poll.status !== "open"} class="is-sm is-primary" onclick={() => onOpenPoll(polls, event, poll)}>{poll.status === "draft" ? "Open poll" : "Reopen"}</button>
-      <button e:else class="is-sm is-primary" onclick={() => onClosePoll(polls, poll)}>Close poll</button>
+    </CardContent>
+    <CardFooter align="start">
+      <Button e:if={poll.status !== "open"} size="sm" variant="primary" onclick={() => onOpenPoll(polls, event, poll)}>{poll.status === "draft" ? "Open poll" : "Reopen"}</Button>
+      <Button e:else size="sm" variant="primary" onclick={() => onClosePoll(polls, poll)}>Close poll</Button>
       <span e:if={current(event).showPollId === poll.id} class="on-screen">On screen</span>
-      <button e:elseif={poll.status !== "draft"} class="is-sm" onclick={() => onShow(event, poll.id)}>Show on screen</button>
-      <button e:if={poll.status === "draft"} class="is-sm is-ghost" onclick={() => onDeletePoll(polls, event, poll)}>Delete</button>
-    </div>
-  </div>
+      <Button e:elseif={poll.status !== "draft"} size="sm" onclick={() => onShow(event, poll.id)}>Show on screen</Button>
+      <Button e:if={poll.status === "draft"} size="sm" variant="ghost" onclick={() => onDeletePoll(polls, event, poll)}>Delete</Button>
+    </CardFooter>
+  </Card>
 </PollCard>
 
 <NewPoll (polls: LiveView<Poll>, private form: PollForm = blankPoll())>
-  <form class="card" onsubmit={() => onCreatePoll(polls, form, () => form = blankPoll())}>
-    <div class="card-head"><h2>New poll</h2></div>
-    <div class="card-body stack">
-      <div class="button-group" role="group" aria-label="Poll type">
-        <button type="button" class={["is-sm", form.kind === "choice" && "is-primary"]} onclick={() => onKind(form, "choice")}>Multiple choice</button>
-        <button type="button" class={["is-sm", form.kind === "words" && "is-primary"]} onclick={() => onKind(form, "words")}>Word cloud</button>
-      </div>
-      <div class="field">
-        <label for="poll-prompt">Question</label>
-        <input id="poll-prompt" value={form.prompt} placeholder={form.kind === "words" ? "One word for this quarter" : "Which should we build next?"}>
-      </div>
-      <div e:if={form.kind === "choice"} class="stack is-sm">
-        <div e:for={o of form.options} class="option-row row">
-          <input value={o.text} placeholder="Option" aria-label="Option">
-          <button type="button" class="is-sm is-ghost" aria-label="Remove option" onclick={() => onRemoveOption(form, o)}>✕</button>
+  <form onsubmit={() => onCreatePoll(polls, form, () => form = blankPoll())}>
+    <Card title="New poll" level={2}>
+      <CardContent class="stack">
+        <ToggleGroup type="single"
+                     value={form.kind}
+                     variant="outline"
+                     size="sm"
+                     spacing={0}
+                     label="Poll type"
+                     class="poll-kind"
+                     onValueChange={(kind, details) => onKind(form, kind, details)}>
+          <ToggleGroupItem value="choice">Multiple choice</ToggleGroupItem>
+          <ToggleGroupItem value="words">Word cloud</ToggleGroupItem>
+        </ToggleGroup>
+        <Field label="Question" reserveError={false}>
+          <Input value={form.prompt} placeholder={form.kind === "words" ? "One word for this quarter" : "Which should we build next?"} />
+        </Field>
+        <div e:if={form.kind === "choice"} class="stack is-sm">
+          <div e:for={o of form.options} class="option-row row">
+            <Input value={o.text} placeholder="Option" attrs={{ "aria-label": "Option" }} />
+            <Button size="sm" variant="ghost" icon label="Remove option" onclick={() => onRemoveOption(form, o)}><Icon name="x" /></Button>
+          </div>
+          <div><Button size="sm" variant="ghost" onclick={() => onAddOption(form)}><Icon name="plus" /> Add option</Button></div>
         </div>
-        <div><button type="button" class="is-sm is-ghost" onclick={() => onAddOption(form)}>+ Add option</button></div>
-      </div>
-      <p e:if={form.error} class="error" role="alert">{form.error}</p>
-    </div>
-    <div class="card-foot">
-      <button type="submit" class="is-sm is-primary">Save as draft</button>
-    </div>
+        <Alert e:if={form.error} variant="danger" description={form.error} />
+      </CardContent>
+      <CardFooter>
+        <Button type="submit" size="sm" variant="primary">Save as draft</Button>
+      </CardFooter>
+    </Card>
   </form>
 </NewPoll>
 
@@ -291,9 +326,9 @@ function statusPill(poll: Poll): string {
 )>
   <Layout title={current(event).title} width="">
     <nav slot="nav" class="cluster is-sm console-nav">
-      <a href="/host" class="button is-sm is-ghost">All events</a>
-      <a href={`/e/${current(event).code}`} target="_blank" rel="noopener" class="button is-sm">Audience view</a>
-      <a href={`/host/events/${current(event).id}/present`} target="_blank" rel="noopener" class="button is-sm is-primary">Presenter screen</a>
+      <Button href="/host" size="sm" variant="ghost">All events</Button>
+      <Button href={`/e/${current(event).code}`} size="sm" attrs={{ target: "_blank", rel: "noopener" }}>Audience view</Button>
+      <Button href={`/host/events/${current(event).id}/present`} size="sm" variant="primary" attrs={{ target: "_blank", rel: "noopener" }}>Presenter screen</Button>
     </nav>
 
     <div class="stack is-xl">
@@ -303,50 +338,40 @@ function statusPill(poll: Poll): string {
           <h1>{current(event).title}</h1>
         </div>
         <div class="cluster">
-          <span class="pill console-code">{current(event).code}</span>
-          <label class="check-row row">
-            <input type="checkbox" checked={current(event).moderated} onchange={() => onModerated(event)}>
+          <Badge variant="secondary" class="console-code">{current(event).code}</Badge>
+          <Label class="check-row">
+            <Switch checked={current(event).moderated} onCheckedChange={() => onModerated(event)} />
             Review before posting
-          </label>
+          </Label>
         </div>
       </div>
 
       <div class="console-grid">
-        <section class="stack">
-          <div class="tabs console-tabs">
-            <div class="tab-list" role="tablist">
-              <button e:if={current(event).moderated || countIn(questions, "review") > 0}
-                      class={["tab", state.filter === "review" && "is-active"]}
-                      onclick={() => onFilter(state, "review")}>
-                Review<span class="tab-count">{countIn(questions, "review")}</span>
-              </button>
-              <button class={["tab", state.filter === "live" && "is-active"]} onclick={() => onFilter(state, "live")}>
-                Live<span class="tab-count">{countIn(questions, "live")}</span>
-              </button>
-              <button class={["tab", state.filter === "answered" && "is-active"]} onclick={() => onFilter(state, "answered")}>
-                Answered<span class="tab-count">{countIn(questions, "answered")}</span>
-              </button>
-              <button class={["tab", state.filter === "hidden" && "is-active"]} onclick={() => onFilter(state, "hidden")}>
-                Hidden<span class="tab-count">{countIn(questions, "hidden")}</span>
-              </button>
-            </div>
-          </div>
-
-          <ul class="q-list">
-            <QuestionRow e:for={q of filtered(questions, votes, state.filter)}
-                         {q}
-                         {questions}
-                         votes={voteCounts(votes).get(q.id) ?? 0} />
-          </ul>
-          <p e:if={countIn(questions, state.filter) === 0} class="q-empty">
-            {state.filter === "review" ? "Nothing waiting for review." : "No questions here yet."}
-          </p>
+        <section>
+          <Tabs value={state.filter} class="console-tabs" onValueChange={(f) => onFilter(state, f)}>
+            <TabsList label="Questions">
+              <TabsTrigger e:for={f of shownFilters(event, questions)} value={f.id}>
+                {f.label}<span class="tab-count">{countIn(questions, f.id)}</span>
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent e:for={f of shownFilters(event, questions)} value={f.id}>
+              <ul e:if={countIn(questions, f.id) > 0} class="q-list">
+                <QuestionRow e:for={q of filtered(questions, votes, f.id)}
+                             {q}
+                             {questions}
+                             votes={voteCounts(votes).get(q.id) ?? 0} />
+              </ul>
+              <Empty e:else
+                     variant="outline"
+                     description={f.id === "review" ? "Nothing waiting for review." : "No questions here yet."} />
+            </TabsContent>
+          </Tabs>
         </section>
 
         <aside class="console-side stack">
           <div class="side-head row">
             <h2>Polls</h2>
-            <button e:if={current(event).showPollId} class="is-sm" onclick={() => onShow(event, null)}>Show questions on screen</button>
+            <Button e:if={current(event).showPollId} size="sm" onclick={() => onShow(event, null)}>Show questions on screen</Button>
           </div>
           <div class="poll-list">
             <PollCard e:for={p of newestFirst(polls)} poll={p} {polls} {event} {responses} />

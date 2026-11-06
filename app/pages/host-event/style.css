@@ -37,8 +37,12 @@
   color: var(--ink-dim);
 }
 
-.tab.is-active .tab-count {
+.tab[data-active] .tab-count {
   color: var(--accent);
+}
+
+.console-tabs .tab-panel {
+  padding-top: var(--space-4);
 }
 
 .q-actions {
@@ -55,18 +59,6 @@
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.poll-card .card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  gap: var(--space-3);
-}
-
-.poll-card h3 {
-  margin: 0;
-  font-size: var(--text-md);
-}
-
 .poll-sub {
   font-size: var(--text-sm);
   color: var(--ink-soft);
@@ -79,7 +71,6 @@
 }
 
 .poll-card .card-foot {
-  justify-content: flex-start;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -88,7 +79,7 @@
   gap: var(--space-2);
 }
 
-.option-row input {
+.option-row .input {
   flex: 1;
 }
 
@@ -108,15 +99,6 @@
   background: var(--accent);
 }
 
-.console-tabs .tab-list {
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.console-tabs .tab {
-  flex: none;
-}
-
 @media (max-width: 60rem) {
   .console-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -128,7 +110,6 @@
 }
 
 .check-row {
-  gap: var(--space-2);
   font-size: var(--text-sm);
 }
 
