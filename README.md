@@ -4,6 +4,8 @@
 
 > Micpass is a full-stack app built with Claude Code on Elements.
 
+Micpass uses the `default` theme from @elements/ui.
+
 Join codes, audience questions ranked by upvotes, live polls and word clouds, and a presenter screen for the projector.
 
 [Run this app on your machine](https://elements.dev/demos/01a0f3c8-b03e-7fa7-84c4-5f186a0fe28a). Use this demo as inspiration, or as the starting point for your own app. Your agent creates a new app with this one as the scaffold, and you prompt it to add whatever features you want.
